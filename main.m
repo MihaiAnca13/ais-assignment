@@ -36,10 +36,21 @@ val_data2 = data2(2:2:end,:);
 
 %%
 TRAIN_P = 80;
+PARTS = 25;
+GROUP_SIZE = length(data1)/PARTS;
 
 all_points = 1:length(data1);
-train_points = datasample(all_points,floor(TRAIN_P/100*length(data1)), 'Replace', false);
-val_points = setdiff(all_points, train_points);
+
+parts = reshape(all_points, [PARTS, GROUP_SIZE]);
+
+train_points = [];
+val_points = [];
+for i = 1:PARTS
+    t = datasample(parts(i,:),floor(TRAIN_P/100*GROUP_SIZE), 'Replace', false);
+    v = setdiff(parts(i,:), t);
+    train_points = [train_points t];
+    val_points = [val_points v];
+end
 
 train_data1 = data1(train_points, :);
 train_data2 = data2(train_points, :);
@@ -55,7 +66,7 @@ val_data2 = data2(val_points, :);
 % code-snippet shown below. The plot is illustrated further for easier
 % understanding.
 %
-plot(X(:),Y(:),'r.'); 
+plot(X(:),Y(:),'r.');
 axis equal;
 xlabel('X','fontsize',10)
 ylabel('Y','fontsize',10)
@@ -64,8 +75,13 @@ title('X-Y coordinates generated for all theta1 and theta2 combinations using fo
 % <<../invkine_grid.png>>
 %
 %%
+opt = genfisOptions('SubtractiveClustering',...
+                    'ClusterInfluenceRange',0.2);
+
+fismat=genfis(train_data1(:,1:2),train_data1(:,3),opt);
+
 opt = anfisOptions;
-opt.InitialFIS = 5;
+opt.InitialFIS = fismat;
 opt.EpochNumber = 150;
 epoch = 1:150;
 opt.DisplayANFISInformation = 0;
@@ -73,7 +89,6 @@ opt.DisplayErrorValues = 0;
 opt.DisplayStepSize = 0;
 opt.DisplayFinalResults = 0;
 
-%%
 % Train an ANFIS system using the first set of training data, |data1|.
 disp('--> Training first ANFIS network.')
 
@@ -83,24 +98,36 @@ opt.ValidationData = val_data1;
 
 figure
 plot(epoch,trnErr,'o-b',epoch,chkErr,'x-r')
-
+disp('--> Finished training first ANFIS network.')
 %%
-% Change the number of input membership functions and train an ANFIS system
-% using the second set of training data, |data2|.
+opt = genfisOptions('SubtractiveClustering',...
+                    'ClusterInfluenceRange',0.2);
+
+fismat=genfis(train_data2(:,1:2),train_data2(:,3),opt);
+
+opt = anfisOptions;
+opt.InitialFIS = fismat;
+opt.EpochNumber = 150;
+epoch = 1:150;
+opt.DisplayANFISInformation = 0;
+opt.DisplayErrorValues = 0;
+opt.DisplayStepSize = 0;
+opt.DisplayFinalResults = 0;
+
 disp('--> Training second ANFIS network.')
-opt.InitialFIS = 5; % grid partitioning
+% opt.InitialFIS = 25; % grid partitioning
 opt.ValidationData = val_data2;
 
 [anfis2,trnErr,ss,anfis22,chkErr] = anfis(train_data2,opt);
 
 figure
 plot(epoch,trnErr,'o-b',epoch,chkErr,'x-r')
-
+disp('--> Finished training second ANFIS network.')
 %%
 % Change the number of input membership functions and train an ANFIS system
 % using the second set of training data, |data2|.
 disp('--> Training third ANFIS network.')
-opt.InitialFIS = 5;
+% opt.InitialFIS = 5;
 opt.ValidationData = val_data3;
 
 [anfis3,trnErr,ss,anfis32,chkErr] = anfis(train_data3,opt);
@@ -122,16 +149,53 @@ NN_THETA = NN_THETA{1}';
 NN_THETA1P = NN_THETA(:,1);
 NN_THETA2P = NN_THETA(:,2);
 
-%% calculate overall RMSE on angles
-RMSE1 = sqrt(mean((THETA1P-val_data1(:,3)).^2));
-RMSE2 = sqrt(mean((THETA2P-val_data2(:,3)).^2));
-% RMSE3 = sqrt(mean((THETA3P-val_data3(:,3)).^2));
+%% calculate overall RMSE, MEAN, MEADIAN and MAXIMUM on angles
+angle_errors1 = THETA1P-val_data1(:,3);
+angle_errors2 = THETA2P-val_data2(:,3);
 
-NN_RMSE1 = sqrt(mean((NN_THETA1P-val_data1(:,3)).^2));
-NN_RMSE2 = sqrt(mean((NN_THETA2P-val_data2(:,3)).^2));
+NN_angle_errors1 = NN_THETA1P-val_data1(:,3);
+NN_angle_errors2 = NN_THETA2P-val_data2(:,3);
 
-["Anfis","MLP","Delta";RMSE1,NN_RMSE1,RMSE1-NN_RMSE1;RMSE2,NN_RMSE2,RMSE2-NN_RMSE2]
-%% calculate overall RMSE on position
+%RMSE
+RMSE1 = sqrt(mean((angle_errors1).^2));
+RMSE2 = sqrt(mean((angle_errors2).^2));
+% RMSE3 = sqrt(mean((angle_errors).^2));
+
+NN_RMSE1 = sqrt(mean(NN_angle_errors1.^2));
+NN_RMSE2 = sqrt(mean(NN_angle_errors2.^2));
+
+%MEAN
+MEAN1 = mean(abs(angle_errors1-mean(angle_errors1)));
+MEAN2 = mean(abs(angle_errors2-mean(angle_errors2)));
+
+NN_MEAN1 = mean(abs(NN_angle_errors1-mean(NN_angle_errors1)));
+NN_MEAN2 = mean(abs(NN_angle_errors2-mean(NN_angle_errors2)));
+
+%MEDIAN
+MEDIAN1 = median(abs(angle_errors1-median(angle_errors1)));
+MEDIAN2 = median(abs(angle_errors2-median(angle_errors2)));
+
+NN_MEDIAN1 = median(abs(NN_angle_errors1-median(NN_angle_errors1)));
+NN_MEDIAN2 = median(abs(NN_angle_errors2-median(NN_angle_errors2)));
+
+%MAXIMUM
+MAXIMUM1 = max(abs(angle_errors1));
+MAXIMUM2 = max(abs(angle_errors2));
+
+NN_MAXIMUM1 = max(abs(NN_angle_errors1));
+NN_MAXIMUM2 = max(abs(NN_angle_errors2));
+
+["Calculation","Anfis","MLP","Delta";
+ "RMSE1",RMSE1,NN_RMSE1,RMSE1-NN_RMSE1;
+ "RMSE2",RMSE2,NN_RMSE2,RMSE2-NN_RMSE2;
+ "MEAN1",MEAN1,NN_MEAN1,MEAN1-NN_MEAN1;
+ "MEAN2",MEAN2,NN_MEAN2,MEAN2-NN_MEAN2;
+ "MEDIAN1",MEDIAN1,NN_MEDIAN1,MEDIAN1-NN_MEDIAN1;
+ "MEDIAN2",MEDIAN2,NN_MEDIAN2,MEDIAN2-NN_MEDIAN2;
+ "MAXIMUM1",MAXIMUM1,NN_MAXIMUM1,MAXIMUM1-NN_MAXIMUM1;
+ "MAXIMUM2",MAXIMUM2,NN_MAXIMUM2,MAXIMUM2-NN_MAXIMUM2;
+ ]
+%% calculate overall RMSE, MEAN, MEADIAN and MAXIMUM on position
 % Xp = l1 * cos(THETA1P) + l2 * cos(THETA1P + THETA2P) + l3 * cos(THETA1P + THETA2P + THETA3P); % compute x coordinates
 % Yp = l1 * sin(THETA1P) + l2 * sin(THETA1P + THETA2P) + l3 * sin(THETA1P + THETA2P + THETA3P); % compute y coordinates
 
@@ -149,7 +213,24 @@ NN_ed = sqrt((NN_Xp-XY(:,1)).^2 + (NN_Yp-XY(:,2)).^2);
 RMSE = sqrt(mean(ed.^2));
 NN_RMSE = sqrt(mean(NN_ed.^2));
 
-["Anfis","MLP","Delta";RMSE,NN_RMSE,RMSE-NN_RMSE]
+%MEAN
+MEAN = mean(abs(ed-mean(ed)));
+NN_MEAN = mean(abs(NN_ed-mean(NN_ed)));
+
+%MEDIAN
+MEDIAN = median(abs(ed-median(ed)));
+NN_MEDIAN = median(abs(NN_ed-median(NN_ed)));
+
+%MAXIMUM
+MAXIMUM = max(abs(ed));
+NN_MAXIMUM = max(abs(NN_ed));
+
+["Calculation","Anfis","MLP","Delta";
+ "RMSE",RMSE,NN_RMSE,RMSE-NN_RMSE;
+ "MEAN",MEAN,NN_MEAN,MEAN-NN_MEAN;
+ "MEDIAN",MEDIAN,NN_MEDIAN,MEDIAN-NN_MEDIAN;
+ "MAXIMUM",MAXIMUM,NN_MAXIMUM,MAXIMUM-NN_MAXIMUM
+ ]
 
 %% display quivers
 err_X = Xp-XY(:,1);
@@ -162,13 +243,12 @@ figure
 subplot(3,1,1)
 quiver(XY(:,1),XY(:,2),err_X(:),err_Y(:))
 title("Anfis");
+axis([2 18 0 16]); 
 subplot(3,1,2)
 quiver(XY(:,1),XY(:,2),NN_err_X(:),NN_err_Y(:))
 title("MLP");
+axis([2 18 0 16]); 
 subplot(3,1,3);
 plot(XY(:,1),XY(:,2),'.'); 
 title("Target");
-
-%% median, maximum error
-%% compare grid partitioning to clustering
-%% split data in n parts, than randomly sample withing each part
+axis([2 18 0 16]); 
