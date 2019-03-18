@@ -136,8 +136,6 @@ figure
 plot(epoch,trnErr,'o-b',epoch,chkErr,'x-r')
 
 %%
-% <matlab:edit('traininv') Click here for unvectorized code>
-%%
 % extract validation data as set of XY
 XY = val_data1(:,1:2);
 THETA1P = evalfis(XY,anfis1); % theta1 predicted by anfis1
@@ -239,16 +237,47 @@ err_Y = Yp-XY(:,2);
 NN_err_X = NN_Xp-XY(:,1);
 NN_err_Y = NN_Yp-XY(:,2);
 
+% all_v = [err_X(:);err_Y(:);NN_err_X;NN_err_Y];
+% a = min(all_v);
+% b = max(all_v);
+% 
+% err_X = map(err_X(:), a, b);
+% err_Y = map(err_Y(:), a, b);
+% NN_err_X = map(NN_err_X(:), a, b);
+% NN_err_Y = map(NN_err_Y(:), a, b);
+
 figure
 subplot(3,1,1)
 quiver(XY(:,1),XY(:,2),err_X(:),err_Y(:))
 title("Anfis");
 axis([2 18 0 16]); 
+
 subplot(3,1,2)
 quiver(XY(:,1),XY(:,2),NN_err_X(:),NN_err_Y(:))
 title("MLP");
 axis([2 18 0 16]); 
+
 subplot(3,1,3);
 plot(XY(:,1),XY(:,2),'.'); 
 title("Target");
 axis([2 18 0 16]); 
+
+%%
+anfis_3 = sqrt(err_X.^2+err_Y.^2);
+nn_3 = sqrt(NN_err_X.^2+NN_err_Y.^2);
+
+CircleSize=100;
+figure;
+h2=scatter3(XY(:,1),XY(:,2),anfis_3,CircleSize,anfis_3,'s','filled');
+xlabel('X axis');
+ylabel('Y axis');
+zlabel('Error');
+title('Anfis');
+colorbar;
+figure;
+h2=scatter3(XY(:,1),XY(:,2),nn_3,CircleSize,nn_3,'s','filled');
+xlabel('X axis');
+ylabel('Y axis');
+zlabel('Error');
+colorbar;
+title('MLP');
