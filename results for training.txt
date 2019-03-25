@@ -1,0 +1,16 @@
+NN:
+trainPerformance =
+
+   1.0631e-04
+
+
+valPerformance =
+
+   1.0982e-04
+
+
+testPerformance =
+
+   1.0871e-04
+
+train_time = 6.7968e+03 -> 1.888 hours
