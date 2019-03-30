@@ -64,26 +64,28 @@ test_data1 = data1(test_points, :);
 test_data2 = data2(test_points, :);
 % test_data3 = data3(test_points, :);
 %%
-epochs = 150;
-
-opt = anfisOptions;
-opt.EpochNumber = epochs;
-opt.DisplayANFISInformation = 0;
-opt.DisplayErrorValues = 0;
-opt.DisplayStepSize = 0;
-opt.DisplayFinalResults = 0;
-
 err = [];
 time = [];
 overfit = [];
-start = 3;
-fin = 10;
-for i = start:fin
-    opt.InitialFIS = i;
-    fprintf('Training with %d membership functions.\n', i);
-    opt.ValidationData = val_data1;
+start = 0.1;
+fin = 0.5;
+for i = start:0.05:fin
+    fprintf('Training with %f.\n', i);
     tic;
+    opt = genfisOptions('SubtractiveClustering',...
+                    'ClusterInfluenceRange',i);
+    fismat=genfis(train_data1(:,1:2),train_data1(:,3),opt);
+    opt = anfisOptions;
+    opt.InitialFIS = fismat;
+    opt.EpochNumber = 150;
+    epoch = 1:150;
+    opt.DisplayANFISInformation = 0;
+    opt.DisplayErrorValues = 0;
+    opt.DisplayStepSize = 0;
+    opt.DisplayFinalResults = 0;
+    opt.ValidationData = val_data1;
     [anfis1,trnErr,ss,anfis12,chkErr] = anfis(train_data1,opt);
+    
     t = toc;
 %     figure;
 %     plot(1:epochs,chkErr,'r');
@@ -102,14 +104,14 @@ end
 %%
 figure
 subplot(4,1,1);
-x = start:fin;
+x = start:0.05:fin;
 plot(x,err);
 ylabel('Error'); 
-xlabel('Membership functions');
+xlabel('ClusterInfluenceRange');
 subplot(4,1,2);
 plot(x,time);
 ylabel('Time');
-xlabel('Membership functions');
+xlabel('ClusterInfluenceRange');
 subplot(4,1,3);
 p_err = rescale(err,0,1);
 p_time = rescale(time,0,1);
@@ -118,7 +120,7 @@ hold on;
 plot(x,p_time,'b');
 hold off;
 ylabel('Normalized err and time');
-xlabel('Membership functions');
+xlabel('ClusterInfluenceRange');
 
 subplot(4,1,4);
 score = [];
@@ -132,4 +134,4 @@ end
 plot(x,score);
 axis([start fin 0 max(score)+1]);
 ylabel('Fitness');
-xlabel('Membership functions');
+xlabel('ClusterInfluenceRange');

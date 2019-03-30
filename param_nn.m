@@ -64,40 +64,73 @@ test_data1 = data1(test_points, :);
 test_data2 = data2(test_points, :);
 % test_data3 = data3(test_points, :);
 %%
-epochs = 150;
+% Choose a Training Function
+trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation
 
-opt = anfisOptions;
-opt.EpochNumber = epochs;
-opt.DisplayANFISInformation = 0;
-opt.DisplayErrorValues = 0;
-opt.DisplayStepSize = 0;
-opt.DisplayFinalResults = 0;
+x = {X(:)'; Y(:)';};
+t = [data1(:,3)'; data2(:,3)';];
 
 err = [];
 time = [];
-overfit = [];
-start = 3;
-fin = 10;
+start = 5;
+fin = 25;
 for i = start:fin
-    opt.InitialFIS = i;
-    fprintf('Training with %d membership functions.\n', i);
-    opt.ValidationData = val_data1;
+    fprintf('Training with %d neurons.\n', i);
     tic;
-    [anfis1,trnErr,ss,anfis12,chkErr] = anfis(train_data1,opt);
-    t = toc;
+    
+    % Create a Fitting Network
+    hiddenLayerSize = i;
+    net = fitnet(hiddenLayerSize,trainFcn);
+
+    % net.numInputs = 2;
+    net.numInputs = 2;
+    net.InputConnect(1,1) = 1;
+    net.InputConnect(1,2) = 1;
+
+    % manually set the train/val/test points
+    net.divideFcn = 'divideind';
+    net.divideParam.trainInd = train_points;
+    net.divideParam.valInd = val_points;
+    net.divideParam.testInd = test_points;
+
+    % Choose a Performance Function
+    % For a list of all performance functions type: help nnperformance
+    net.performFcn = 'mse';  % Mean Squared Error
+
+    % Choose Plot Functions
+    % For a list of all plot functions type: help nnplot
+    net.plotFcns = {'plotperform','plottrainstate','ploterrhist', ...
+        'plotregression', 'plotfit'};
+
+    %configure
+    net = configure(net,x,t);
+
+    % Train the Network
+    [net,tr] = train(net,x,t);
+
+    % Test the Network
+    y = net(x);
+    e = gsubtract(t,y);
+    performance = perform(net,t,y);
+
+    % Recalculate Training, Validation and Test Performance
+    trainTargets = t .* tr.trainMask{1};
+    valTargets = t .* tr.valMask{1};
+    testTargets = t .* tr.testMask{1};
+    trainPerformance = perform(net,trainTargets,y);
+    valPerformance = perform(net,valTargets,y);
+    testPerformance = perform(net,testTargets,y);
+    
+    train_t = toc;
 %     figure;
 %     plot(1:epochs,chkErr,'r');
 %     hold on;
 %     plot(1:epochs,trnErr,'b');
 %     hold off;
 %     pause(0.1);
-    if (abs(trnErr(end) - chkErr(end)) > mean(chkErr))
-        overfit = [overfit 1];
-    else
-        overfit = [overfit 0];
-    end
-    err = [err chkErr(end)];
-    time = [time t];
+
+    err = [err valPerformance];
+    time = [time train_t];
 end
 %%
 figure
@@ -105,11 +138,11 @@ subplot(4,1,1);
 x = start:fin;
 plot(x,err);
 ylabel('Error'); 
-xlabel('Membership functions');
+xlabel('Neurons');
 subplot(4,1,2);
 plot(x,time);
 ylabel('Time');
-xlabel('Membership functions');
+xlabel('Neurons');
 subplot(4,1,3);
 p_err = rescale(err,0,1);
 p_time = rescale(time,0,1);
@@ -118,18 +151,14 @@ hold on;
 plot(x,p_time,'b');
 hold off;
 ylabel('Normalized err and time');
-xlabel('Membership functions');
+xlabel('Neurons');
 
 subplot(4,1,4);
 score = [];
-for i = 1:length(overfit)
-    if overfit(i) == 0
-        score = [score 1/(p_time(i)+p_err(i))*10];
-    else
-        score = [score 0];
-    end
+for i = 1:length(p_err)
+    score = [score 1/(p_time(i)+p_err(i))*10];
 end
 plot(x,score);
 axis([start fin 0 max(score)+1]);
 ylabel('Fitness');
-xlabel('Membership functions');
+xlabel('Neurons');

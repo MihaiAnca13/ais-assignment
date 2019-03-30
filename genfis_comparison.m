@@ -19,7 +19,7 @@ train_data1 = data1(1:2:end,:);
 val_data1 = data1(2:2:end,:);
 %% train first
 opt = genfisOptions('SubtractiveClustering',...
-                    'ClusterInfluenceRange',0.1);
+                    'ClusterInfluenceRange',0.2);
 
 % opt = genfisOptions('GridPartition');
 % opt.NumMembershipFunctions = 5;
@@ -44,7 +44,7 @@ opt.ValidationData = val_data1;
 disp('--> Finished training first ANFIS network.')
 %% train second
 opt2 = genfisOptions('GridPartition');
-opt2.NumMembershipFunctions = 5;
+opt2.NumMembershipFunctions = 7;
 
 fismat=genfis(train_data1(:,1:2),train_data1(:,3),opt2);
 
