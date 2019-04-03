@@ -1,12 +1,15 @@
 % extract validation data as set of XY
 XY = test_data1(:,1:2);
-THETA1P = evalfis(XY,anfis1); % theta1 predicted by anfis1
-THETA2P = evalfis(XY,anfis2); % theta2 predicted by anfis2
-THETA3P = evalfis(XY,anfis3); % theta3 predicted by anfis3
+
+NN_THETA = MLP_2layers({XY(:,1)';XY(:,2)'});
+NN_THETA = NN_THETA{1}';
+THETA1P = NN_THETA(:,1);
+THETA2P = NN_THETA(:,2);
+THETA3P = NN_THETA(:,3);
 
 
-SUM_THETA = test_data1(:,3)+test_data2(:,3)+test_data3(:,3);
-NN_THETA = MLP_3joints({XY(:,1)';XY(:,2)';SUM_THETA(:)'});
+% SUM_THETA = val_data1(:,3)+val_data2(:,3)+val_data3(:,3);
+NN_THETA = MLP_simple_1layer({XY(:,1)';XY(:,2)'});
 NN_THETA = NN_THETA{1}';
 NN_THETA1P = NN_THETA(:,1);
 NN_THETA2P = NN_THETA(:,2);
@@ -57,7 +60,7 @@ NN_MAXIMUM1 = max(abs(NN_angle_errors1));
 NN_MAXIMUM2 = max(abs(NN_angle_errors2));
 NN_MAXIMUM3 = max(abs(NN_angle_errors3));
 
-["Calculation","Anfis","MLP","Delta";
+["Calculation","2 layers","1 layer","Delta";
  "RMSE1",RMSE1,NN_RMSE1,RMSE1-NN_RMSE1;
  "RMSE2",RMSE2,NN_RMSE2,RMSE2-NN_RMSE2;
  "RMSE3",RMSE3,NN_RMSE3,RMSE3-NN_RMSE3;
@@ -98,7 +101,7 @@ NN_MEDIAN = median(abs(NN_ed-median(NN_ed)));
 MAXIMUM = max(abs(ed));
 NN_MAXIMUM = max(abs(NN_ed));
 
-["Calculation","Anfis","MLP","Delta";
+["Calculation","2 layers","1 layer","Delta";
  "RMSE",RMSE,NN_RMSE,RMSE-NN_RMSE;
  "MEAN",MEAN,NN_MEAN,MEAN-NN_MEAN;
  "MEDIAN",MEDIAN,NN_MEDIAN,MEDIAN-NN_MEDIAN;
@@ -147,7 +150,7 @@ h2=scatter3(XY(:,1),XY(:,2),anfis_3,CircleSize,anfis_3,'s','filled');
 xlabel('X axis');
 ylabel('Y axis');
 zlabel('Error');
-title('Anfis');
+title('2 layers MLP');
 colorbar;
 caxis([0 1])
 figure(3);
@@ -157,7 +160,7 @@ ylabel('Y axis');
 zlabel('Error');
 colorbar;
 caxis([0 1])
-title('MLP');
+title('1 layer 2 inputs MLP');
 
 %% histogram
 errs1 = abs(round(angle_errors1(:,1),3));

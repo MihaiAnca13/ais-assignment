@@ -70,67 +70,73 @@ trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation
 x = {X(:)'; Y(:)';};
 t = [data1(:,3)'; data2(:,3)';];
 
-err = [];
 time = [];
+err = [];
 start = 5;
 fin = 25;
 for i = start:fin
     fprintf('Training with %d neurons.\n', i);
-    tic;
-    
-    % Create a Fitting Network
-    hiddenLayerSize = i;
-    net = fitnet(hiddenLayerSize,trainFcn);
+    avg_times = 10;
+    avg = zeros(avg_times,2);
+    for j = 1:avg_times
+        fprintf('Training %d time(s).\n', j);
+        tic;
+        % Create a Fitting Network
+        hiddenLayerSize = i;
+        net = fitnet(hiddenLayerSize,trainFcn);
 
-    % net.numInputs = 2;
-    net.numInputs = 2;
-    net.InputConnect(1,1) = 1;
-    net.InputConnect(1,2) = 1;
+        % net.numInputs = 2;
+        net.numInputs = 2;
+        net.InputConnect(1,1) = 1;
+        net.InputConnect(1,2) = 1;
 
-    % manually set the train/val/test points
-    net.divideFcn = 'divideind';
-    net.divideParam.trainInd = train_points;
-    net.divideParam.valInd = val_points;
-    net.divideParam.testInd = test_points;
+        % manually set the train/val/test points
+        net.divideFcn = 'divideind';
+        net.divideParam.trainInd = train_points;
+        net.divideParam.valInd = val_points;
+        net.divideParam.testInd = test_points;
 
-    % Choose a Performance Function
-    % For a list of all performance functions type: help nnperformance
-    net.performFcn = 'mse';  % Mean Squared Error
+        % Choose a Performance Function
+        % For a list of all performance functions type: help nnperformance
+        net.performFcn = 'mse';  % Mean Squared Error
 
-    % Choose Plot Functions
-    % For a list of all plot functions type: help nnplot
-    net.plotFcns = {'plotperform','plottrainstate','ploterrhist', ...
-        'plotregression', 'plotfit'};
+        % Choose Plot Functions
+        % For a list of all plot functions type: help nnplot
+        net.plotFcns = {'plotperform','plottrainstate','ploterrhist', ...
+            'plotregression', 'plotfit'};
 
-    %configure
-    net = configure(net,x,t);
+        %configure
+        net = configure(net,x,t);
 
-    % Train the Network
-    [net,tr] = train(net,x,t);
+        % Train the Network
+        [net,tr] = train(net,x,t);
 
-    % Test the Network
-    y = net(x);
-    e = gsubtract(t,y);
-    performance = perform(net,t,y);
+        % Test the Network
+        y = net(x);
+        e = gsubtract(t,y);
+        performance = perform(net,t,y);
 
-    % Recalculate Training, Validation and Test Performance
-    trainTargets = t .* tr.trainMask{1};
-    valTargets = t .* tr.valMask{1};
-    testTargets = t .* tr.testMask{1};
-    trainPerformance = perform(net,trainTargets,y);
-    valPerformance = perform(net,valTargets,y);
-    testPerformance = perform(net,testTargets,y);
-    
-    train_t = toc;
-%     figure;
-%     plot(1:epochs,chkErr,'r');
-%     hold on;
-%     plot(1:epochs,trnErr,'b');
-%     hold off;
-%     pause(0.1);
+        % Recalculate Training, Validation and Test Performance
+        trainTargets = t .* tr.trainMask{1};
+        valTargets = t .* tr.valMask{1};
+        testTargets = t .* tr.testMask{1};
+        trainPerformance = perform(net,trainTargets,y);
+        valPerformance = perform(net,valTargets,y);
+        testPerformance = perform(net,testTargets,y);
 
-    err = [err valPerformance];
-    time = [time train_t];
+        train_t = toc;
+    %     figure;
+    %     plot(1:epochs,chkErr,'r');
+    %     hold on;
+    %     plot(1:epochs,trnErr,'b');
+    %     hold off;
+    %     pause(0.1);
+        avg(j,1) = valPerformance;
+        avg(j,2) = train_t;
+    end
+
+    err = [err mean(avg(:,1))];
+    time = [time mean(avg(:,2))];
 end
 %%
 figure

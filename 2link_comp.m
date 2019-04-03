@@ -1,5 +1,5 @@
 % extract validation data as set of XY
-XY = val_data1(:,1:2);
+XY = test_data1(:,1:2);
 THETA1P = evalfis(XY,anfis1); % theta1 predicted by anfis1
 THETA2P = evalfis(XY,anfis2); % theta2 predicted by anfis2
 
@@ -9,11 +9,11 @@ NN_THETA1P = NN_THETA(:,1);
 NN_THETA2P = NN_THETA(:,2);
 
 %% calculate overall RMSE, MEAN, MEADIAN and MAXIMUM on angles
-angle_errors1 = THETA1P-val_data1(:,3);
-angle_errors2 = THETA2P-val_data2(:,3);
+angle_errors1 = THETA1P-test_data1(:,3);
+angle_errors2 = THETA2P-test_data2(:,3);
 
-NN_angle_errors1 = NN_THETA1P-val_data1(:,3);
-NN_angle_errors2 = NN_THETA2P-val_data2(:,3);
+NN_angle_errors1 = NN_THETA1P-test_data1(:,3);
+NN_angle_errors2 = NN_THETA2P-test_data2(:,3);
 
 %RMSE
 RMSE1 = sqrt(mean((angle_errors1).^2));
